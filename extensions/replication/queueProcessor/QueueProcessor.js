@@ -57,7 +57,7 @@ class _AccountAuthManager {
     }
 
     lookupAccountAttributes(accountId, cb) {
-        const localAccountId = this._accountArn.split(':')[3];
+        const localAccountId = this._accountArn.split(':')[4];
         if (localAccountId !== accountId) {
             this._log.error('Target account for replication must match ' +
                             'configured destination account ARN',
@@ -76,7 +76,7 @@ class _RoleAuthManager {
     constructor(bootstrapList, roleArn, log) {
         this._log = log;
         // FIXME use bootstrap list
-        const [host, port] = bootstrapList[0].servers.split(':');
+        const [host, port] = bootstrapList[0].servers[0].split(':');
         this._vaultclient = new VaultClient(host, port, undefined, undefined,
             undefined, undefined, undefined, undefined, undefined, undefined,
             proxyPath);
@@ -457,9 +457,9 @@ class QueueProcessor {
     }
 
     _setupClients(sourceRole, targetRole, log) {
-        const sourceS3 = this.sourceConfig.s3.host;
+        const sourceS3 = this.sourceConfig.s3;
         // FIXME use bootstrap list
-        const [destHost, destPort] = this.destConfig.bootstrapList[0].servers
+        const [destHost, destPort] = this.destConfig.bootstrapList[0].servers[0]
             .split(':');
 
         this.s3sourceAuthManager =
