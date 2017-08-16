@@ -20,9 +20,11 @@ var options = {
 function processKafkaEntry(kafkaEntry, done) {
     process.stdout.write(`${kafkaEntry.value}\n`);
     var s3 = new AWS.S3();
-    var params = {Bucket: d_buck, Key: f_name};
+    // f_name = kafkaEntry.value;
+    var params = {Bucket: "kafkarawaudio", Key: 'issasong.mp3'};
     var file = require('fs').createWriteStream('./temp/save.mp3');
-    test();
+    s3.getObject(params).createReadStream().pipe(file);
+    // test();
     return done();
 }
 

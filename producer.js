@@ -11,9 +11,9 @@ if (process.argv.length != 3) {
 }
 
 var buck = bucket.src;
-var f_name = 'issasong.mp3';
+var f_name = process.argv[2];
 
-var fileStream = fs.createReadStream('issasong.mp3');
+var fileStream = fs.createReadStream(f_name);
 fileStream.on('error', function (err) {
   if (err) { throw err; }
 });
