@@ -7,47 +7,56 @@ let fs = require('fs');
 const bucket = require('./bucket.json');
 var src_bucket = bucket.src;
 var dst_bucket = bucket.destiny;
+var output_list = bucket.output_types;
+
+function transcode_upload(f_name, format_ext) {
+	var hbjs = require('handbrake-js');
+
+	var trans_name = f_name.substring(0, f_name.lastIndexOf('.')) + '.' + format_ext;
+	process.stdout.write('TRANSCODING: ' + trans_name + '\n');
+	hbjs.spawn({ input: './temp/' + f_name, output: trans_name })
+	  .on('error', function(err){
+		// invalid user input, no video found etc
+	  })
+	  .on('progress', function(progress){
+		console.log(
+		  '%s Percent complete: %s, ETA: %s',
+		  format_ext,
+		  progress.percentComplete,
+		  progress.eta
+		);
+	  })
+	  .on('end', function() {
+		  let s3 = new AWS.S3();
+		  let read_file = fs.createReadStream(trans_name);
+		  s3.putObject({
+			  Bucket: dst_bucket,
+			  Key: trans_name,
+			  Body: read_file
+		  }, function (err) {
+			  if (err) {
+				  throw err;
+				  console.log('error putting object\n');
+			  }
+			  process.stdout.write(format_ext + ' FILE UPLOADED\n');
+		  });
+	  });
+}
 
 function processKafkaEntry(kafkaEntry, done) {
-	let s3 = new AWS.S3();
 	var f_name = kafkaEntry.value.toString();
 	process.stdout.write('GETTING: ' + f_name + '\n');
 	let params = {Bucket: src_bucket, Key: f_name};
 	let file = fs.createWriteStream('./temp/' + f_name);
+	let s3 = new AWS.S3();
 
 	s3.getObject(params).createReadStream().pipe(file);
-
 	file.on('close', function () {
-		var hbjs = require('handbrake-js');
-
 		process.stdout.write('FILE RECIEVED\n');
-		var trans_name = f_name.substring(0, f_name.lastIndexOf('.')) + '.m4v';
-		process.stdout.write('TRANSCODING: ' + trans_name + '\n');
-		hbjs.spawn({ input: './temp/' + f_name, output: trans_name })
-		  .on('error', function(err){
-		    // invalid user input, no video found etc
-		  })
-		  .on('progress', function(progress){
-		    console.log(
-		      'Percent complete: %s, ETA: %s',
-		      progress.percentComplete,
-		      progress.eta
-		    );
-		  })
-		  .on('end', function() {
-			  let read_file = fs.createReadStream(trans_name);
-			  s3.putObject({
-				  Bucket: dst_bucket,
-				  Key: trans_name,
-				  Body: read_file
-			  }, function (err) {
-				  if (err) {
-					  throw err;
-					  console.log('error putting object\n');
-				  }
-				  process.stdout.write('FILE UPLOADED\n');
-			  });
-		  });
+		for (var x in output_list) {
+			transcode_upload(f_name, output_list[x]);
+		}
+		process.stdout.write('PROCESS DONE.\n');
 	});
 	return done();
 }
