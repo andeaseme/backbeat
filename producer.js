@@ -32,6 +32,11 @@ function upload()
 			send();
 		});
 	});
+	fileStream.on('close', function () {
+		fs.unlink(f_name, function(err) {
+			if (err) { throw err; }
+		});
+	});
 };
 
 function send()
