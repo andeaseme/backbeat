@@ -1,11 +1,10 @@
 'use strict'; // eslint-disable-line
 
-const VersionIDUtils = require('arsenal').versioning.VersionID;
-
+const ObjectMD = require('arsenal').models.ObjectMD;
 const VID_SEP = require('arsenal').versioning.VersioningConstants
           .VersionId.Separator;
 
-class QueueEntry {
+class QueueEntry extends ObjectMD {
 
     /**
      * @constructor
@@ -14,13 +13,12 @@ class QueueEntry {
      *   status)
      * @param {string} objectKey - entry's object key without version
      *   suffix
-     * @param {object} objMd - entry's object metadata as a parsed JS
-     *   object
+     * @param {ObjectMD} objMd - entry's object metadata
      */
     constructor(bucket, objectKey, objMd) {
+        super(objMd);
         this.bucket = bucket;
         this.objectKey = objectKey;
-        this.objMd = objMd;
     }
 
     checkSanity() {
@@ -73,57 +71,12 @@ class QueueEntry {
         }
     }
 
-    isDeleteMarker() {
-        return this.objMd.isDeleteMarker;
-    }
-
     getBucket() {
         return this.bucket;
     }
 
     getObjectKey() {
         return this.objectKey;
-    }
-
-    getVersionId() {
-        return this.objMd.versionId;
-    }
-
-    getEncodedVersionId() {
-        return VersionIDUtils.encode(this.getVersionId());
-    }
-
-    getMetadataBlob() {
-        return JSON.stringify(this.objMd);
-    }
-
-    getContentLength() {
-        return this.objMd['content-length'];
-    }
-
-    getContentMD5() {
-        return this.objMd['content-md5'];
-    }
-
-    getReplicationStatus() {
-        return this.objMd.replicationInfo.status;
-    }
-
-    getReplicationContent() {
-        return this.objMd.replicationInfo.content;
-    }
-
-    getReplicationRoles() {
-        return this.objMd.replicationInfo.role;
-    }
-
-    getReplicationDestBucket() {
-        const destBucketArn = this.objMd.replicationInfo.destination;
-        return destBucketArn.split(':').slice(-1)[0];
-    }
-
-    getOwnerCanonicalId() {
-        return this.objMd['owner-id'];
     }
 
     getLogInfo() {
@@ -135,46 +88,12 @@ class QueueEntry {
         };
     }
 
-    getLocation() {
-        return this.objMd.location;
-    }
-
-    buildLocationKey(location, key) {
-        const destinationLocation = Object.assign({}, location);
-        return destinationLocation.key = key; // eslint-disable-line
-    }
-
-    getDataStoreETag(location) {
-        return location.dataStoreETag;
-    }
-
-    getPartNumber(location) {
-        return Number.parseInt(location.dataStoreETag.split(':')[0], 10);
-    }
-
-    getPartETag(location) {
-        return location.dataStoreETag.split(':')[1];
-    }
-
-    getPartSize(location) {
-        return location.size;
-    }
-
-    setOwner(ownerCanonicalId, ownerDisplayName) {
-        this.objMd['owner-id'] = ownerCanonicalId;
-        this.objMd['owner-display-name'] = ownerDisplayName;
-    }
-
-    setLocation(location) {
-        this.objMd.location = location;
-    }
-
     _convertEntry(bucket, repStatus) {
         const replicationInfo = Object.assign({}, this.objMd.replicationInfo);
-        const replicaMd = Object.assign({}, this.objMd);
+        const replicaMd = new Object.assign({}, this.objMd);
         replicaMd.replicationInfo = replicationInfo;
         replicaMd.replicationInfo.status = repStatus;
-        return new QueueEntry(bucket, this.objectKey, replicaMd);
+        const newEntry = new QueueEntry(bucket, this.objectKey, this);
     }
 
     toReplicaEntry() {

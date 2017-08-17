@@ -11,6 +11,7 @@ const Logger = require('werelogs').Logger;
 const errors = require('arsenal').errors;
 const jsutil = require('arsenal').jsutil;
 const RoundRobin = require('arsenal').network.RoundRobin;
+const ObjectMDLocation = require('arsenal').models.ObjectMDLocation;
 const VaultClient = require('vaultclient').Client;
 const { proxyPath } = require('../constants');
 
@@ -407,8 +408,8 @@ class QueueProcessor {
                 log.debug('setting owner info in target metadata',
                           { entry: destEntry.getLogInfo(),
                             accountAttr });
-                destEntry.setOwner(accountAttr.canonicalID,
-                                   accountAttr.displayName);
+                destEntry.setOwnerId(accountAttr.canonicalID);
+                destEntry.setOwnerDisplayName(accountAttr.displayName);
                 return cb();
             });
     }
@@ -424,14 +425,15 @@ class QueueProcessor {
 
     _getAndPutPartOnce(sourceEntry, destEntry, part, log, done) {
         const doneOnce = jsutil.once(done);
-        if (sourceEntry.getDataStoreETag(part) === undefined) {
+        const partObj = new ObjectMDLocation(part);
+        if (partObj.getDataStoreETag() === undefined) {
             log.error('cannot replicate object without dataStoreETag ' +
                       'property',
                       { method: 'QueueProcessor._getAndPutData',
                         entry: destEntry.getLogInfo() });
             return doneOnce(errors.InvalidObjectState);
         }
-        const partNumber = sourceEntry.getPartNumber(part);
+        const partNumber = partObj.getPartNumber();
         const req = this.S3source.getObject({
             Bucket: sourceEntry.getBucket(),
             Key: sourceEntry.getObjectKey(),
@@ -469,9 +471,9 @@ class QueueProcessor {
         return this.backbeatDest.putData({
             Bucket: destEntry.getBucket(),
             Key: destEntry.getObjectKey(),
-            CanonicalID: destEntry.getOwnerCanonicalId(),
-            ContentLength: destEntry.getPartSize(part),
-            ContentMD5: destEntry.getPartETag(part),
+            CanonicalID: destEntry.getOwnerId(),
+            ContentLength: partObj.getPartSize(),
+            ContentMD5: partObj.getPartETag(),
             Body: incomingMsg,
         }, (err, data) => {
             if (err) {
@@ -484,8 +486,8 @@ class QueueProcessor {
                             error: err.message });
                 return doneOnce(err);
             }
-            return doneOnce(null,
-                            destEntry.buildLocationKey(part, data.Location[0]));
+            partObj.setKey(data.Location[0]);
+            return doneOnce(null, partObj.getValue());
         });
     }
 
@@ -496,7 +498,7 @@ class QueueProcessor {
         const cbOnce = jsutil.once(cb);
         const target = where === 'source' ?
                   this.backbeatSource : this.backbeatDest;
-        const mdBlob = entry.getMetadataBlob();
+        const mdBlob = entry.getSerialized();
         target.putMetadata({
             Bucket: entry.getBucket(),
             Key: entry.getObjectKey(),
@@ -626,7 +628,7 @@ class QueueProcessor {
                 { log, reason: err.description }, done);
         };
 
-        if (sourceEntry.isDeleteMarker()) {
+        if (sourceEntry.getIsDeleteMarker()) {
             return async.waterfall([
                 next => {
                     this._setupRoles(sourceEntry, log, next);
