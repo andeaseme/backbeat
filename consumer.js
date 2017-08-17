@@ -21,7 +21,9 @@ function processKafkaEntry(kafkaEntry, done) {
 		var hbjs = require('handbrake-js');
 
 		process.stdout.write('FILE RECIEVED\n');
-		hbjs.spawn({ input: './temp/' + f_name, output: 'something.m4v' })
+		var trans_name = f_name.substring(0, f_name.lastIndexOf('.')) + '.m4v';
+		process.stdout.write('TRANSCODING: ' + trans_name + '\n');
+		hbjs.spawn({ input: './temp/' + f_name, output: trans_name })
 		  .on('error', function(err){
 		    // invalid user input, no video found etc
 		  })
@@ -33,10 +35,10 @@ function processKafkaEntry(kafkaEntry, done) {
 		    );
 		  })
 		  .on('end', function() {
-			  let read_file = fs.createReadStream('something.m4v');
+			  let read_file = fs.createReadStream(trans_name);
 			  s3.putObject({
 				  Bucket: dst_bucket,
-				  Key: 'something.m4v',
+				  Key: trans_name,
 				  Body: read_file
 			  }, function (err) {
 				  if (err) {
@@ -47,9 +49,6 @@ function processKafkaEntry(kafkaEntry, done) {
 			  });
 		  });
 	});
-
-
-	// test();
 	return done();
 }
 
