@@ -4,48 +4,56 @@ var AWS = require('aws-sdk'),
     fs = require('fs');
 
 const bucket = require('./bucket.json');
-
-if (process.argv.length != 3) {
-  console.log("Usage: " + __filename + " [filepath]\n");
-  process.exit(-1);
-}
-
-var buck = bucket.src;
+var src_bucket = bucket.src;
 var f_name = process.argv[2];
 
-var fileStream = fs.createReadStream(f_name);
-fileStream.on('error', function (err) {
-  if (err) { throw err; }
-});
+if (process.argv.length != 3) {
+	console.log("Usage: " + __filename + " [filepath]\n");
+	process.exit(-1);
+}
 
-fileStream.on('open', function () {
-  var s3 = new AWS.S3();
-  s3.putObject({
-    Bucket: buck,
-    Key: f_name,
-    Body: fileStream
-  }, function (err) {
-    if (err) { throw err; }
-    process.stdout.write('SEND COMPLETED.\n');
-    return process.exit();
-  });
-});
+function upload()
+{
+	var fileStream = fs.createReadStream(f_name);
 
-const producer = new BackbeatProducer({
-    zookeeper: config.zookeeper,
-    topic: 'producer-test-topic',
-});
+	fileStream.on('error', function (err) {
+		if (err) { throw err; }
+	});
 
-producer.on('ready', () =>
-    producer.send([{ key: 'foo', message: f_name }], err => {
-        if (err) {
-            return process.stdout.write(`${err}`);
-        }
-        // process.stdout.write('SEND COMPLETED.\n');
-        // return process.exit();
+	fileStream.on('open', function () {
+		var s3 = new AWS.S3();
+		s3.putObject({
+			Bucket: src_bucket,
+			Key: f_name,
+			Body: fileStream
+		}, function (err) {
+			if (err) { throw err; }
+			process.stdout.write('UPLOAD COMPLETED.\n');
+			send();
+		});
+	});
+};
+
+function send()
+{
+	const producer = new BackbeatProducer({
+		zookeeper: config.zookeeper,
+		topic: 'producer-test-topic',
+	});
+
+	producer.on('ready', () =>
+	    producer.send([{ key: 'foo', message: f_name }], err => {
+	        if (err) {
+	            return process.stdout.write(`${err}`);
+	        }
+	        process.stdout.write('SEND COMPLETED.\n');
+	        return process.exit();
     }));
 
-producer.on('error', err => {
-    process.stdout.write(`${err}`);
-    return process.exit();
-});
+	producer.on('error', err => {
+	    process.stdout.write(`${err}`);
+	    return process.exit();
+	});
+};
+
+upload();
