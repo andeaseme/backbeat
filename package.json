@@ -37,6 +37,7 @@
     "joi": "^10.6",
     "kafka-node": "^1.6.0",
     "node-schedule": "^1.2.0",
+	"uuid": "3.1.0",
     "vaultclient": "github:scality/vaultclient",
     "werelogs": "scality/werelogs"
   },
