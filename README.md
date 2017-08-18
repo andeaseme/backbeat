@@ -1,34 +1,99 @@
-# Zenko Backbeat
+# Video Transcoding
+A Zenko Backbeat Module
 
-![backbeat logo](res/backbeat-logo.png)
+## Overview
+Many websites like Youtube stream each video in a variety of formats to support all kinds of devices and all you have to do is upload once.  We aim to provide an open source solution to enable others to do the same.  This module automates video transcoding over S3 buckets using Backbeat to dispatch work to a long-running transcoder.
 
-[![Circle CI](http://ci.ironmann.io/gh/scality/backbeat.svg?style=svg&circle-token=32e5dfd968e673450c44f0a255d1a812bae9b00c)](http://ci.ironmann.io/gh/scality/backbeat)
+## Local Quickstart
 
-## OVERVIEW
+This guide assumes the following:
+* Using MacOS
+* `brew` is installed. (https://brew.sh/)
+* `node` is installed (v6.9.5)
+* `npm` is installed (3.10.10)
+* `aws` is installed (aws-cli/1.11.1)
 
-Backbeat is an engine with a messaging system at its heart.
-It's part of Zenko, [Scality](http://www.scality.com/)’s
-Open Source Multi-Cloud Data Controller.
-Learn more about Zenko at [Zenko.io](http://www.zenko.io/)
 
-Backbeat is optimized for queuing metadata updates and dispatching work
-to long-running tasks in the background.
-The core engine can be extended for many use cases,
-which are called extensions, as listed below.
+### Run kafka and zookeeper locally
 
-## EXTENSIONS
+#### Install kafka and zookeeper
 
-### Asynchronous Replication
+```
+brew install kafka && brew install zookeeper
+```
 
-This feature replicates objects from one S3 bucket to another S3
-bucket in a different geographical region. The extension uses the
-local Metadata journal as the source of truth and replicates object
-updates in a FIFO order.
+Make sure you have `/usr/local/bin` in your `PATH` env variable (or wherever your homebrew programs are installed):
 
-## DESIGN
+```
+echo 'export PATH="$PATH:/usr/local/bin"' >> ~/.bash_profile
+```
 
-Please refer to the ****[Design document](/DESIGN.md)****
-<<<<<<< HEAD
-=======
-# Backbeat_Encoding
->>>>>>> old_b/master
+#### Start kafka and zookeeper servers
+
+```
+mkdir ~/kafka && \
+cd ~/kafka && \
+curl http://apache.claz.org/kafka/0.11.0.0/kafka_2.11-0.11.0.0.tgz | tar xvz && \
+sed 's/zookeeper.connect=.*/zookeeper.connect=localhost:2181\/backbeat/' \
+kafka_2.11-0.11.0.0/config/server.properties > \
+kafka_2.11-0.11.0.0/config/server.properties.backbeat
+```
+
+Start the zookeeper server:
+
+```
+zookeeper-server-start ~/kafka/kafka_2.11-0.11.0.0/config/zookeeper.properties
+```
+
+In a new shell, start the kafka server:
+
+```
+kafka-server-start ~/kafka/kafka_2.11-0.11.0.0/config/server.properties.backbeat
+```
+
+#### Create a zookeeper node and kafka topic
+
+In a new shell, connect to the zookeeper server with the ZooKeeper chroot `/backbeat` path:
+
+```
+zkCli -server localhost:2181/backbeat
+```
+
+Create the `producer-test-topic` node:
+
+```
+create /populator my_data
+```
+
+We may leave the zookeeper server now:
+
+```
+quit
+```
+
+Create the `producer-test-topic` topic:
+
+```
+kafka-topics --create \
+--zookeeper localhost:2181/backbeat \
+--replication-factor 1 \
+--partitions 1 \
+--topic producer-test-topic
+```
+
+#### Setup video transcoding with backbeat
+
+In a new shell, clone backbeat:
+
+```
+git clone https://github.com/andeaseme/backbeat/ ~/backbeat && \
+cd ~/backbeat && \
+npm install
+```
+#### Setup S3 Buckets JSON
+
+#### Start consumer and producer
+
+## Zenko Backbeat
+
+Please refer to ****[Scality's Zenko Backbeat](https://github.com/scality/backbeat)****
