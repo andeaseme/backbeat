@@ -51,13 +51,16 @@ function transcode_upload(f_name, format_ext) {
 				console.log('error putting object\n');
 			}
 			process.stdout.write(format_ext + ' FILE UPLOADED\n');
-			deleteTemps(trans_name);
 		});
+		//return(deleteTemps(trans_name));
 	});
 }
 
 function processKafkaEntry(kafkaEntry, done) {
+
 	let f_name = kafkaEntry.value.toString();
+	if (f_name != "Done")
+	{
 	process.stdout.write('GETTING: ' + f_name + '\n');
 	let params = {Bucket: src_bucket, Key: f_name};
 	f_name = f_name.substring(6);
@@ -72,6 +75,7 @@ function processKafkaEntry(kafkaEntry, done) {
 		}
 		process.stdout.write('PROCESS DONE.\n');
 	});
+}
 	return done();
 }
 

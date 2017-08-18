@@ -46,11 +46,18 @@ let ready_name = 'ready/' + data.Contents[1].Key.substring(4);
 	 s3.deleteObject(params, function(err, data) {
 	   if (err) console.log(err, err.stack); // an error occurred
 	   else
-		 		send(ready_name, 0);
+		 {
+			 send(ready_name, 0);
+			 send("Done",0);
+		 }
+
 
 	 });
  }
  });
+		}
+		else {
+			 send("Done",0);
 		}
 	});
 }
