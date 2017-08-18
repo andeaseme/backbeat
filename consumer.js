@@ -1,50 +1,63 @@
 const config = require('./conf/Config');
 const BackbeatConsumer = require('./lib/BackbeatConsumer');
 const AWS = require('aws-sdk');
-const events = require('events');
+const EventEmitter = require('events');
 let fs = require('fs');
 
 const bucket = require('./bucket.json');
-var src_bucket = bucket.src;
-var dst_bucket = bucket.destiny;
-var output_list = bucket.output_types;
+const EE = new EventEmitter();
+let src_bucket = bucket.src;
+let dst_bucket = bucket.destiny;
+let output_list = bucket.output_types;
+
+function deleteTemps(f_name) {
+	fs.unlink(f_name, function (err) {
+		if (err) {
+			throw err;
+			console.log('Failure to delete ' + f_name);
+			return ;
+		}
+	});
+	console.log(f_name + ' deleted\n');
+}
 
 function transcode_upload(f_name, format_ext) {
-	var hbjs = require('handbrake-js');
+	let hbjs = require('handbrake-js');
 
-	var trans_name = f_name.substring(0, f_name.lastIndexOf('.')) + '.' + format_ext;
+	let trans_name = f_name.substring(0, f_name.lastIndexOf('.')) + '.' + format_ext;
 	process.stdout.write('TRANSCODING: ' + trans_name + '\n');
 	hbjs.spawn({ input: './temp/' + f_name, output: trans_name })
-	  .on('error', function(err){
-		// invalid user input, no video found etc
-	  })
-	  .on('progress', function(progress){
+		.on('error', function(err){
+			// invalid user input, no video found etc
+		})
+	.on('progress', function(progress){
 		console.log(
-		  '%s Percent complete: %s, ETA: %s',
-		  format_ext,
-		  progress.percentComplete,
-		  progress.eta
-		);
-	  })
-	  .on('end', function() {
-		  let s3 = new AWS.S3();
-		  let read_file = fs.createReadStream(trans_name);
-		  s3.putObject({
-			  Bucket: dst_bucket,
-			  Key: trans_name,
-			  Body: read_file
-		  }, function (err) {
-			  if (err) {
-				  throw err;
-				  console.log('error putting object\n');
-			  }
-			  process.stdout.write(format_ext + ' FILE UPLOADED\n');
-		  });
-	  });
+				'%s Percent complete: %s, ETA: %s',
+				format_ext,
+				progress.percentComplete,
+				progress.eta
+				);
+	})
+	.on('end', function() {
+		let s3 = new AWS.S3();
+		let read_file = fs.createReadStream(trans_name);
+		s3.putObject({
+			Bucket: dst_bucket,
+			Key: trans_name,
+			Body: read_file
+		}, function (err) {
+			if (err) {
+				throw err;
+				console.log('error putting object\n');
+			}
+			process.stdout.write(format_ext + ' FILE UPLOADED\n');
+			deleteTemps(trans_name);
+		});
+	});
 }
 
 function processKafkaEntry(kafkaEntry, done) {
-	var f_name = kafkaEntry.value.toString();
+	let f_name = kafkaEntry.value.toString();
 	process.stdout.write('GETTING: ' + f_name + '\n');
 	let params = {Bucket: src_bucket, Key: f_name};
 	let file = fs.createWriteStream('./temp/' + f_name);
@@ -53,7 +66,7 @@ function processKafkaEntry(kafkaEntry, done) {
 	s3.getObject(params).createReadStream().pipe(file);
 	file.on('close', function () {
 		process.stdout.write('FILE RECIEVED\n');
-		for (var x in output_list) {
+		for (let x in output_list) {
 			transcode_upload(f_name, output_list[x]);
 		}
 		process.stdout.write('PROCESS DONE.\n');

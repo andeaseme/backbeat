@@ -1,7 +1,8 @@
 const config = require('./conf/Config');
 const BackbeatProducer = require('./lib/BackbeatProducer');
+const uuidv4 = require('uuid/v4');
 var AWS = require('aws-sdk'),
-    fs = require('fs');
+	fs = require('fs');
 
 const bucket = require('./bucket.json');
 var src_bucket = bucket.src;
@@ -21,6 +22,9 @@ function upload()
 	});
 
 	fileStream.on('open', function () {
+		f_name = f_name.substring(0, f_name.lastIndexOf('.')) + '-' +
+				 uuidv4() + f_name.substring(f_name.lastIndexOf('.'),
+						 f_name.length);
 		var s3 = new AWS.S3();
 		s3.putObject({
 			Bucket: src_bucket,
@@ -30,11 +34,6 @@ function upload()
 			if (err) { throw err; }
 			process.stdout.write('UPLOAD COMPLETED.\n');
 			send();
-		});
-	});
-	fileStream.on('close', function () {
-		fs.unlink(f_name, function(err) {
-			if (err) { throw err; }
 		});
 	});
 };
@@ -47,17 +46,17 @@ function send()
 	});
 
 	producer.on('ready', () =>
-	    producer.send([{ key: 'foo', message: f_name }], err => {
-	        if (err) {
-	            return process.stdout.write(`${err}`);
-	        }
-	        process.stdout.write('SEND COMPLETED.\n');
-	        return process.exit();
-    }));
+			producer.send([{ key: 'foo', message: f_name }], err => {
+				if (err) {
+					return process.stdout.write(`${err}`);
+				}
+				process.stdout.write('SEND COMPLETED.\n');
+				return process.exit();
+			}));
 
 	producer.on('error', err => {
-	    process.stdout.write(`${err}`);
-	    return process.exit();
+		process.stdout.write(`${err}`);
+		return process.exit();
 	});
 };
 
