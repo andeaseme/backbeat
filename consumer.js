@@ -11,7 +11,7 @@ let dst_bucket = bucket.destiny;
 let output_list = bucket.output_types;
 
 function deleteTemps(f_name) {
-	fs.unlink(f_name, function (err) {
+	fs.unlink("./temp/" + f_name, function (err) {
 		if (err) {
 			throw err;
 			console.log('Failure to delete ' + f_name);
@@ -26,7 +26,7 @@ function transcode_upload(f_name, format_ext) {
 
 	let trans_name = f_name.substring(0, f_name.lastIndexOf('.')) + '.' + format_ext;
 	process.stdout.write('TRANSCODING: ' + trans_name + '\n');
-	hbjs.spawn({ input: './temp/' + f_name, output: trans_name })
+	hbjs.spawn({ input: './temp/' + f_name, output: './temp/' + trans_name })
 		.on('error', function(err){
 			// invalid user input, no video found etc
 		})
@@ -40,7 +40,7 @@ function transcode_upload(f_name, format_ext) {
 	})
 	.on('end', function() {
 		let s3 = new AWS.S3();
-		let read_file = fs.createReadStream(trans_name);
+		let read_file = fs.createReadStream('./temp/' + trans_name);
 		s3.putObject({
 			Bucket: dst_bucket,
 			Key: trans_name,
@@ -60,6 +60,7 @@ function processKafkaEntry(kafkaEntry, done) {
 	let f_name = kafkaEntry.value.toString();
 	process.stdout.write('GETTING: ' + f_name + '\n');
 	let params = {Bucket: src_bucket, Key: f_name};
+	f_name = f_name.substring(6);
 	let file = fs.createWriteStream('./temp/' + f_name);
 	let s3 = new AWS.S3();
 
