@@ -4,6 +4,8 @@ A Zenko Backbeat Module
 ## Overview
 Many websites like Youtube stream each video in a variety of formats to support all kinds of devices and all you have to do is upload once.  We aim to provide an open source solution to enable others to do the same.  This module automates video transcoding over S3 buckets using Backbeat to dispatch work to a long-running transcoder.
 
+Check out the [Zenko Blog Post](http://www.zenko.io/blog/video-automating-video-transcoding/)!
+
 ## Local Quickstart
 
 This guide assumes the following:
@@ -91,8 +93,38 @@ cd ~/backbeat && \
 npm install
 ```
 #### Setup S3 Buckets JSON
+Set your source and destination buckets in `bucket.json`
+```
+{
+	"src" : "Source_Bucket",
+	"destiny" : "Destination_Bucket",
+	"output_types" : {
+		"type1" : "m4v",
+		"type2" : "mp4",
+		"type3" : "mkv"
+	}
+}
+```
 
-#### Start consumer and producer
+#### Start consumer
+```
+node consumer.js
+```
+The consumer will wait for a task to be queued then download the file, transcode video, upload to destination bucket.
+#### Start producer with CLI
+
+In a new shell, start producer
+```
+node producer.js spacetestSMALL.wmv
+```
+The producer will upload the video to the source bucket and queue up a task for the consumer.
+#### Start producer as long running watcher task
+
+In a new shell, start producer
+```
+node producer.js
+```
+Upload video files to your S3 `Source_Bucket\raw\'.`  NOTE: raw directory in bucket
 
 ## Zenko Backbeat
 
