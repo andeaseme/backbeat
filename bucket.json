@@ -1,0 +1,9 @@
+{
+	"src" : "42rawfile",
+	"destiny" : "42zenko",
+	"output_types" : {
+		"type1" : "m4v",
+		"type2" : "mp4",
+		"type3" : "mkv"
+	}
+}

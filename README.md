@@ -28,3 +28,7 @@ updates in a FIFO order.
 ## DESIGN
 
 Please refer to the ****[Design document](/DESIGN.md)****
+<<<<<<< HEAD
+=======
+# Backbeat_Encoding
+>>>>>>> old_b/master
