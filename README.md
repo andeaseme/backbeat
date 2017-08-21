@@ -1,5 +1,7 @@
 # Video Transcoding
 A Zenko Backbeat Module
+![video-transcoding-overview](res/video-transcoding-overview.png)
+
 
 ## Overview
 Many websites like Youtube stream each video in a variety of formats to support all kinds of devices and all you have to do is upload once.  We aim to provide an open source solution to enable others to do the same.  This module automates video transcoding over S3 buckets using Backbeat to dispatch work to a long-running transcoder.
