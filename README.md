@@ -131,3 +131,8 @@ Upload video files to your S3 `Source_Bucket\raw\'.`  NOTE: raw directory in buc
 ## Zenko Backbeat
 
 Please refer to ****[Scality's Zenko Backbeat](https://github.com/scality/backbeat)****
+
+## Contributors
+- [Andie Shining Phan](https://github.com/andeaseme) 
+- [Wiley Debs](https://github.com/Colortear) 
+- [Robert Passafaro](https://github.com/blockco) 
