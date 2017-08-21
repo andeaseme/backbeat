@@ -5,7 +5,6 @@ const EventEmitter = require('events');
 let fs = require('fs');
 
 const bucket = require('./bucket.json');
-const EE = new EventEmitter();
 let src_bucket = bucket.src;
 let dst_bucket = bucket.destiny;
 let output_list = bucket.output_types;
@@ -26,19 +25,21 @@ function transcode_upload(f_name, format_ext) {
 
 	let trans_name = f_name.substring(0, f_name.lastIndexOf('.')) + '.' + format_ext;
 	process.stdout.write('TRANSCODING: ' + trans_name + '\n');
-	hbjs.spawn({ input: './temp/' + f_name, output: './temp/' + trans_name })
-		.on('error', function(err){
-			// invalid user input, no video found etc
-		})
-	.on('progress', function(progress){
+	const handie = hbjs.spawn({ input: './temp/' + f_name, output: './temp/' + trans_name });
+	handie.on('error', function(err){
+		if (err)
+			throw err;
+		// invalid user input, no video found etc
+	});
+	handie.on('progress', function(progress){
 		console.log(
 				'%s Percent complete: %s, ETA: %s',
 				format_ext,
 				progress.percentComplete,
 				progress.eta
 				);
-	})
-	.on('end', function() {
+	});
+	handie.on('end', function() {
 		let s3 = new AWS.S3();
 		let read_file = fs.createReadStream('./temp/' + trans_name);
 		s3.putObject({
@@ -52,7 +53,6 @@ function transcode_upload(f_name, format_ext) {
 			}
 			process.stdout.write(format_ext + ' FILE UPLOADED\n');
 		});
-		//return(deleteTemps(trans_name));
 	});
 }
 
@@ -61,21 +61,21 @@ function processKafkaEntry(kafkaEntry, done) {
 	let f_name = kafkaEntry.value.toString();
 	if (f_name != "Done")
 	{
-	process.stdout.write('GETTING: ' + f_name + '\n');
-	let params = {Bucket: src_bucket, Key: f_name};
-	f_name = f_name.substring(6);
-	let file = fs.createWriteStream('./temp/' + f_name);
-	let s3 = new AWS.S3();
+		process.stdout.write('GETTING: ' + f_name + '\n');
+		let params = {Bucket: src_bucket, Key: f_name};
+		f_name = f_name.substring(6);
+		let file = fs.createWriteStream('./temp/' + f_name);
+		let s3 = new AWS.S3();
 
-	s3.getObject(params).createReadStream().pipe(file);
-	file.on('close', function () {
-		process.stdout.write('FILE RECIEVED\n');
-		for (let x in output_list) {
-			transcode_upload(f_name, output_list[x]);
-		}
-		process.stdout.write('PROCESS DONE.\n');
-	});
-}
+		s3.getObject(params).createReadStream().pipe(file);
+		file.on('close', function () {
+			process.stdout.write('FILE RECIEVED\n');
+			for (let x in output_list) {
+				transcode_upload(f_name, output_list[x]);
+			}
+			process.stdout.write('PROCESS DONE.\n');
+		});
+	}
 	return done();
 }
 
